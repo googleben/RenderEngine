@@ -10,4 +10,13 @@ public class VertexOutput implements Cloneable {
         this.position = position;
     }
 
+    @Override
+    public Object clone() {
+        try {
+            return super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new RuntimeException("Clone failed");
+        }
+    }
+
 }

@@ -49,6 +49,16 @@ public class Matrix {
         return transform(v.toVector4()).toVector3();
     }
 
+    public static Matrix buildScale(float x, float y, float z) {
+        return new Matrix(x, 0, 0,
+                          0, y, 0,
+                          0, 0, z);
+    }
+
+    public static Matrix buildScale(Vector3 scale) {
+        return buildScale(scale.getX(), scale.getY(), scale.getZ());
+    }
+
     public static Matrix buildPerspective(float fov, float aspect, float near, float far) {
         float o_o_dep = 1 / (far-near);
         float a = 1 / (float)Math.tan(.5 * fov);

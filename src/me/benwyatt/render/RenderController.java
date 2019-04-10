@@ -4,6 +4,8 @@ import me.benwyatt.render.math.Mesh;
 import me.benwyatt.render.math.Vector3;
 
 import java.awt.*;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -143,8 +145,16 @@ public class RenderController {
 
         float area = sign(a.getX(), a.getY(), b, c);
 
-        for (int x = (int)left.getX()-1; x <= right+1; x++) {
-            for (int y = (int)bottom-1; y <= top+1; y++) {
+        Class<?> cl = aV.getClass();
+        ArrayList<Field> interpolate = new ArrayList<>();
+        for (Field f : cl.getFields()) {
+            if (f.getAnnotation(Interpolate.class) != null) interpolate.add(f);
+        }
+
+        VertexOutput vOut = (VertexOutput)aV.clone();
+
+        for (int x = Math.max((int)left.getX()-1, 0); x <= right+1 && x < surface.getWidth(); x++) {
+            for (int y = Math.max((int)bottom-1, 0); y <= top+1 && y < surface.getHeight(); y++) {
                 float w0 = sign(x, y, a, b);
                 float w1 = sign(x, y, b, c);
                 float w2 = sign(x, y, c, a);
@@ -152,12 +162,37 @@ public class RenderController {
                     w0 /= area;
                     w1 /= area;
                     w2 /= area;
+                    float recipZ = a.getZ() * w0 + b.getZ() * w1 + c.getZ() * w2;
+                    float z = 1 / recipZ;
                     if (useDepthBuffer) {
-                        if (w2 > depthBuffer[x][y]) continue;
-                        depthBuffer[x][y] = w2;
+                        if (z > depthBuffer[x][y]) continue;
+                        depthBuffer[x][y] = z;
                     }
-                    aV.position = new Vector3(w0, w1, w2);
-                    Color color = pixelShader.getColor(aV, params);
+                    w0 = Math.min(w0, 1);
+                    w1 = Math.min(w1, 1);
+                    w2 = Math.min(w2, 1);
+                    for (Field f : interpolate) {
+                        Vector3 aInt;
+                        Vector3 bInt;
+                        Vector3 cInt;
+                        try {
+                            aInt = (Vector3)f.get(aV);
+                            bInt = (Vector3)f.get(bV);
+                            cInt = (Vector3)f.get(cV);
+                        } catch (IllegalAccessException e) {
+                            throw new RuntimeException("Illegal access");
+                        }
+                        float xInt = aInt.getX() * w0 + bInt.getX() * w1 + cInt.getX() * w2;
+                        float yInt = aInt.getY() * w0 + bInt.getY() * w1 + cInt.getY() * w2;
+                        float zInt = aInt.getZ() * w0 + bInt.getZ() * w1 + cInt.getZ() * w2;
+                        try {
+                            f.set(vOut, new Vector3(x, y, z));
+                        } catch (IllegalAccessException e) {
+                            throw new RuntimeException("Illegal access");
+                        }
+                    }
+                    vOut.position = new Vector3(Math.min(w0, 1), Math.min(w1, 1), Math.min(w2, 1));
+                    Color color = pixelShader.getColor(vOut, params);
                     surface.setPixel(x, y, color);
                 }
             }

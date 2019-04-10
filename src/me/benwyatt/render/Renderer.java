@@ -23,11 +23,16 @@ public class Renderer extends JFrame {
         add(canvas);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         models = new Model[] {
-                new Model(Mesh.cube)
+                new Model(Mesh.MONKEY),
+                new Model(Mesh.CUBE)
         };
+        models[1].setScale(new Vector3(0.25f, 0.25f, 0.25f));
+        models[1].setPos(new Vector3(1.5f, 1.5f, 1.5f));
         canvas.addDragListener((dx, dy) -> {
             Vector3 rot = camera.getRotation();
-            rot.setX(rot.getX()-((int)((rot.getY()+3.14/2)/(2*3.14) % 2) == 0 ? 1 : 1) * dy/400f);
+            float rotY = rot.getY() + 3.14f/2;
+            if (rotY < 0) rotY = (-rotY % (2*3.14f)) - 2*3.14f;
+            rot.setX(rot.getX()-((int)(rotY/(3.14) % 2) == 0 ? 1 : -1) * dy/400f);
             rot.setY(rot.getY()-dx/400f);
         });
         camera = new Camera();
@@ -68,11 +73,15 @@ public class Renderer extends JFrame {
         Matrix view = camera.view();
         Matrix proj = Matrix.buildPerspective(0.78f, canvas.getWidth()/(float)canvas.getHeight(), 0.01f, 100);
         controller.beginRenderPass(canvas,
-                (inPos, params) -> new VertexOutput(
+                (inPos, params) -> new LightingVertexOutput(
                         ((Matrix)params.get("matProjection"))
                                 .multiply((Matrix)params.get("matWorld"))
-                                .transform(inPos)),
-                (vertexOut, params) -> new Color(vertexOut.position.getX(), vertexOut.position.getY(), vertexOut.position.getZ())
+                                .transform(inPos), inPos),
+                //(vertexOut, params) -> new Color(vertexOut.position.getX(), vertexOut.position.getY(), vertexOut.position.getZ())
+                ((vertexOut, params) -> {
+                    Vector3 v = vertexOut.normal.normalize();
+                    return new Color(v.getX(), v.getY(), v.getZ());
+                })
                 );
         controller.getParams().put("matProjection", proj.multiply(view));
         for (Model m : models) {

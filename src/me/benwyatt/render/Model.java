@@ -12,6 +12,7 @@ public class Model {
     private RenderMethod renderMethod = RenderMethod.RASTERIZED;
     private Vector3 pos = new Vector3();
     private Vector3 rot = new Vector3();
+    private Vector3 scale = new Vector3(1, 1, 1);
 
     public Model(Mesh mesh) {
         this.mesh = mesh;
@@ -21,7 +22,7 @@ public class Model {
         Matrix position = Matrix.buildPosition(pos);
         Matrix rotation = Matrix.buildRotation(rot);
         Matrix world = position.multiply(rotation);
-        params.put("matWorld", world);
+        params.put("matWorld", getWorldMatrix());
     }
 
     public Mesh getMesh() {
@@ -40,6 +41,10 @@ public class Model {
         this.renderMethod = renderMethod;
     }
 
+    public Matrix getWorldMatrix() {
+        return Matrix.buildPosition(pos).multiply(Matrix.buildRotation(rot)).multiply(Matrix.buildScale(scale));
+    }
+
     public Vector3 getPos() {
         return pos;
     }
@@ -55,4 +60,13 @@ public class Model {
     public void setRot(Vector3 rot) {
         this.rot = rot;
     }
+
+    public Vector3 getScale() {
+        return scale;
+    }
+
+    public void setScale(Vector3 scale) {
+        this.scale = scale;
+    }
+
 }
